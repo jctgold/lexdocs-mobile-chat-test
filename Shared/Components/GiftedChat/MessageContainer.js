@@ -69,7 +69,7 @@ export const renderQuickReplies = (props) => (
     <QuickReplies
       {...props}
       color={colors.secondary} 
-      quickReplyStyle={{ backgroundColor: colors.white, paddingVertical: 5, minHeight: 40, width: 200 }}
+      quickReplyStyle={{ backgroundColor: colors.white, paddingVertical: 5, maxWidth: 270 }}
       quickReplyTextStyle={{ textAlign: 'center', padding: 0, margin: 0 }}
     />
   </ScrollView>

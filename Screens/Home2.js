@@ -1,8 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Text, Image } from '@rneui/themed';
 import { View, StyleSheet } from 'react-native';
 import { GiftedChat } from 'react-native-gifted-chat/src'
+
+import  { getTypes, getKinds, getTemplateByKind, postSchema } from './getItems'
 import initialMessages from './messages';
+import { robot, user, affiantNo, partyKind } from './templates';
 
 import { 
   renderComposer,
@@ -22,93 +25,101 @@ import colors from '../Shared/Helpers/colors';
 
 const title="Step 1 - Preliminary Questions"
 
-export function Home2({ navigation }) {
+let quickRepliesItems = [];
+let selectedDocumentType = [];
+let selectedKind = []
+let selectedTemplateByKind = []
+let selectedHowMany = []
+
+export function Home2({ }) {
   
-  const [messages, setMessages] = useState([]);
+  const [ messages, setMessages ] = useState([]);
+  const [ step, setStep ] = useState(1);
   const [ inputEnabled, setInputEnabled] = useState(false);
+  const [ isTyping, setIsTyping] = useState(true);
+  const [ lexdocs, setLexdocs] = useState([]);
 
   useEffect(() => {
     setMessages(initialMessages.reverse());
   }, [])
 
-  const onSend = (messages = []) => {
-    console.log(messages)
+  useEffect(() => { 
+    sendBotResponse()
+  }, [step])
+
+  async function setQuickRepliesItems () {
+
+    console.log("Selected kind",selectedKind?.value)
+    var quickReplyFunc = {
+      1: async function() { return quickRepliesItems = await getTypes()},
+      2: async function() { return quickRepliesItems = await getKinds(selectedDocumentType.value)},
+      3: async function() { return quickRepliesItems = await getTemplateByKind(selectedKind.value)},
+      4: async function() { return quickRepliesItems = affiantNo },
+      5: async function() { return quickRepliesItems = partyKind }
+      // 'default': async function() { return quickRepliesItems = [{title: "sample", value: 1}] }
+    };
+    return await (quickReplyFunc[step] || quickReplyFunc['default'])();
+  }
+
+  async function getBotResponse () {
+    var response = {
+      1: `What type of legal document do you need?`,
+      2: `What kind of "${selectedDocumentType?.title}" do you need?`,
+      3: `What kind of "${selectedKind?.title}" do you need?`,
+      4: `How many "Affiant" who will sign the "${selectedTemplateByKind?.title}"?` ,
+      5: `What kind of party is the Affiant?`,
+      'default': 'fail'
+    };
+    return await (response[step] || response['default']);
+  }
+
+  async function sendBotResponse() {
+
+    setIsTyping(true)
+    await setQuickRepliesItems();
+    console.log("\n", step)
+    var response = await getBotResponse();
+
+    let msg = {
+      _id: messages.length + 1,
+      text: response,
+      user: robot,
+      quickReplies: {
+        type: 'radio',
+        values: quickRepliesItems
+      }
+    }
+    
+    setMessages(prevState => GiftedChat.append(prevState, msg));
+    setIsTyping(false)
+  }
+
+  async function onSend(messages = []) {
     setMessages(prevState => GiftedChat.append(prevState, messages));
   }
   
-  function onQuickReply(quickReply) {
-    
+  async function onQuickReply(quickReply) {
+
+    console.log("step onquickreply: ", step)
+    if(step === 1) { selectedDocumentType = quickReply[0] }
+    else if(step === 2) selectedKind = quickReply[0]
+    else if(step === 3) selectedTemplateByKind = quickReply[0]
+    else if(step === 4) selectedHowMany = quickReply[0]
+    // else if(step === 5) selectedFinalTemplate = quickReply[0]
+
     let message = quickReply[0].title;
     let msg = {
       _id: messages.length + 1,
       text: message,
-      user: {
-        _id: 1,
-        name: "user"
-      }
+      user
     }
+    await onSend(msg);
 
-    console.log(msg)
-    onSend(msg);
+    if(step !== 5)
+      setStep(prevStep => prevStep + 1)
+    else 
+      postSchema(selectedDocumentType, selectedKind, selectedTemplateByKind, selectedHowMany)
 
-    setTimeout(function(){ 
-      var botResponse = `What kind of '${message}' do you need?`;
-  
-      msg = {
-        _id: messages.length + 2,
-        text: botResponse,
-        user: {
-          _id: 2,
-          name: 'robot',
-          avatar: require("../Shared/Images/lexdoc/lexie/smile.png")
-        },
-        quickReplies: {
-          type: 'radio',
-          values: [
-            {
-              title: 'Affidavit of Acceptance',
-              value: '0',
-            },
-            {
-              title: 'Affidavit of Adverse Claim',
-              value: '1',
-            },
-            {
-              title: 'Affidavit of Aggregate Agricultural Landholdings',
-              value: '2',
-            },
-            {
-              title: 'Affidavit of Assumption of Liability',
-              value: '3',
-            },
-            {
-              title: 'Affidavit of Attainment of Majority Age',
-              value: '4',
-            },
-            {
-              title: 'Affidavit of Building Ownership',
-              value: '5',
-            },
-            {
-              title: 'Affidavit of Cancellation',
-              value: '6',
-            },
-            {
-              title: 'Affidavit of Change in Motor Vehicle',
-              value: '7',
-            },
-            {
-              title: 'Affidavit of Child Custody',
-              value: '8',
-            },
-          ]
-        },
-      }
-  
-      onSend(msg);
-    }, 500);
-
-    
   }
 
 
@@ -122,8 +133,7 @@ export function Home2({ navigation }) {
 
 				<GiftedChat
           messages={messages}
-
-          scrollToBottom={true}
+          isTyping={isTyping}
           alwaysShowSend
           renderSend={renderSend}
           renderComposer={renderComposer}
@@ -132,19 +142,12 @@ export function Home2({ navigation }) {
           renderBubble={renderBubble}
           renderMessageText={renderMessageText}
           renderMessage={renderMessage}
-
           renderQuickReplies={renderQuickReplies}
-
           onQuickReply={onQuickReply}
-
           placeholder={inputEnabled ? "Type your answer here" : "Select your answer above"}
-          user={{
-            _id: 1,
-            name: 'user',
-          }}
+          user={user}
           onSend={onSend}
           showUserAvatar 
-
         />
 			</View>
 		</View>

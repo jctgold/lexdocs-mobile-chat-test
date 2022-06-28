@@ -84,7 +84,7 @@ function Home({ navigation }) {
             placeholder="Select your answer above"
             contentStyle={{backgroundColor: '#E4E7EA', padding: 10}}
             submitButtonStyle={{ borderTopRightRadius: 3, borderBottomRightRadius: 3, backgroundColor: colors.secondary_light}}
-            submitButtonContent={() => <Icon name="arrow-upward" type="material" />}
+            submitButtonContent={() => <Icon name="arrow-upward" size={26} color={colors.white} />}
         />
 			</View>
       </View>
