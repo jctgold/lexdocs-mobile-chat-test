@@ -3,9 +3,9 @@ import { Text, Image } from '@rneui/themed';
 import { View, StyleSheet } from 'react-native';
 import { GiftedChat } from 'react-native-gifted-chat/src'
 
-import  { getTypes, getKinds, getTemplateByKind, postSchema } from './getItems'
+import  { getTypes, getKinds, getTemplateByKind, fetchTemplate } from './getItems'
 import initialMessages from './messages';
-import { robot, user, affiantNo, partyKind } from './templates';
+import { robot, user, affiantNo, partyKind, proceedToStep2 } from './templates';
 
 import { 
   renderComposer,
@@ -38,6 +38,8 @@ export function Home2({ }) {
   const [ inputEnabled, setInputEnabled] = useState(false);
   const [ isTyping, setIsTyping] = useState(true);
   const [ lexdocs, setLexdocs] = useState([]);
+  const [ fetchedTemplate, setFetchedTemplate] = useState([]);
+  const [ disableComposer, setDisableComposer] = useState(false);
 
   useEffect(() => {
     setMessages(initialMessages.reverse());
@@ -47,15 +49,20 @@ export function Home2({ }) {
     sendBotResponse()
   }, [step])
 
+  useEffect(() => { 
+    console.log("\n\nFetched items:", fetchedTemplate.template?.name, fetchedTemplate.template?.price, fetchedTemplate.template?.minutes_to_finish_document )
+  }, [fetchedTemplate])
+
   async function setQuickRepliesItems () {
 
     console.log("Selected kind",selectedKind?.value)
     var quickReplyFunc = {
-      1: async function() { return quickRepliesItems = await getTypes()},
-      2: async function() { return quickRepliesItems = await getKinds(selectedDocumentType.value)},
-      3: async function() { return quickRepliesItems = await getTemplateByKind(selectedKind.value)},
-      4: async function() { return quickRepliesItems = affiantNo },
-      5: async function() { return quickRepliesItems = partyKind }
+      1: async function() { setDisableComposer(true); return quickRepliesItems = await getTypes()},
+      2: async function() { setDisableComposer(true); return quickRepliesItems = await getKinds(selectedDocumentType.value)},
+      3: async function() { setDisableComposer(true); return quickRepliesItems = await getTemplateByKind(selectedKind.value)},
+      4: async function() { setDisableComposer(true); return quickRepliesItems = affiantNo },
+      5: async function() { setDisableComposer(true); return quickRepliesItems = partyKind },
+      6: async function() { setDisableComposer(true); return quickRepliesItems = proceedToStep2 }
       // 'default': async function() { return quickRepliesItems = [{title: "sample", value: 1}] }
     };
     return await (quickReplyFunc[step] || quickReplyFunc['default'])();
@@ -68,6 +75,7 @@ export function Home2({ }) {
       3: `What kind of "${selectedKind?.title}" do you need?`,
       4: `How many "Affiant" who will sign the "${selectedTemplateByKind?.title}"?` ,
       5: `What kind of party is the Affiant?`,
+      6: `Please review the legal document that you selected below. Are you sure this is the legal document you need?\n\n"${fetchedTemplate.template?.name}"\n\nNo. of Affiant: 1, 1 Individual\nPrice of Document - ₱${fetchedTemplate.template?.price}\nNo. of Questions - 16\nNo. of Minutes to Complete - ${fetchedTemplate.template?.minutes_to_finish_document}`,
       'default': 'fail'
     };
     return await (response[step] || response['default']);
@@ -77,7 +85,6 @@ export function Home2({ }) {
 
     setIsTyping(true)
     await setQuickRepliesItems();
-    console.log("\n", step)
     var response = await getBotResponse();
 
     let msg = {
@@ -89,9 +96,8 @@ export function Home2({ }) {
         values: quickRepliesItems
       }
     }
-    
+      
     setMessages(prevState => GiftedChat.append(prevState, msg));
-    setIsTyping(false)
   }
 
   async function onSend(messages = []) {
@@ -115,11 +121,8 @@ export function Home2({ }) {
     }
     await onSend(msg);
 
-    if(step !== 5)
-      setStep(prevStep => prevStep + 1)
-    else 
-      postSchema(selectedDocumentType, selectedKind, selectedTemplateByKind, selectedHowMany)
-
+    if(step === 5) setFetchedTemplate(await fetchTemplate(selectedDocumentType, selectedKind, selectedTemplateByKind, selectedHowMany))
+    if(step !== 6) setStep(prevStep => prevStep + 1)
   }
 
 
@@ -133,10 +136,10 @@ export function Home2({ }) {
 
 				<GiftedChat
           messages={messages}
-          isTyping={isTyping}
+          isTyping={isTyping || true}
           alwaysShowSend
-          renderSend={renderSend}
-          renderComposer={renderComposer}
+          renderSend={(props) => renderSend(disableComposer, props)}
+          renderComposer={(props) => renderComposer(disableComposer, props)}
           renderInputToolbar={renderInputToolbar}
           renderAvatar={renderAvatar}
           renderBubble={renderBubble}
@@ -161,28 +164,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white
   },
-  chatExtraContainer: {
-		paddingHorizontal: 10,
-		paddingBottom: 20,
-		paddingTop: 5,
-  },
-  chatInnerContainer: {
-		paddingHorizontal: 15,
-		paddingTop: 15,
-  },
   insertButton: {
 		borderRadius: 15,
 		marginTop: 10,
 		paddingVertical: 8
-  },
-  enterIconContainer: {
-		backgroundColor: colors.secondary_light,
-		alignItems: 'center',
-		justifyContent: 'center'
-  },
-  enterIcon: {
-		paddingVertical: 10,
-		paddingHorizontal: 15
   },
   chatContainer: {
 		flex: 1,
@@ -197,19 +182,6 @@ const styles = StyleSheet.create({
   mainTop: {
 		backgroundColor: colors.white,
 		padding: 12
-  },
-  mainMiddle: {
-		flex: 1,
-		justifyContent: 'space-between',
-		alignItems: 'stretch',
-  },
-  mainBottom: {
-		flexDirection: 'row',
-		borderRadius: 3,
-		backgroundColor: colors.secondary,
-		justifyContent: 'space-between',
-		alignItems: 'stretch',
-		overflow: 'hidden',
   },
   scroll: {
 		flex: 1,
@@ -226,15 +198,4 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 		fontSize: 15
   },
-  inputContainer: {
-		flex: 1,
-		alignItems: 'center',
-		justifyContent: 'center'
-  },
-  input: {
-		fontSize: 15,
-		color: colors.white,
-		padding: 10,
-		flexWrap: 'wrap'
-  }
 })

@@ -84,6 +84,7 @@ export async function getTemplateByKind(lexdoc_kind_id) {
     });
 
     console.log("getitems templateByKind: ",templateByKind)
+    
   })
   .catch(function(error){
     return console.log(error)
@@ -92,23 +93,27 @@ export async function getTemplateByKind(lexdoc_kind_id) {
   return templateByKind
 }
 
-export async function postSchema(lexdoc_type_id, lexdoc_kind_id, lexdoc_template_id, how_many ) {
+export async function fetchTemplate(lexdoc_type_id, lexdoc_kind_id, lexdoc_template_id, how_many) {
 
-  const schema = JSON.stringify({
+  const schema = {
     "lexdoc_type_id" : lexdoc_type_id.value,
     "lexdoc_kind_id" : lexdoc_kind_id.value,
     "lexdoc_template_id" : lexdoc_template_id.value,
     "how_many" : how_many.value,
     "kind_of_parties[Affiant][0]" : "Individual"
-  })
+  }
 
+  let response = []
   console.log("schema:", schema)
 
-  await axiosAuth.post(`client/lexdocs/template/get`, schema, {headers:{"Content-Type" : "application/json"}})
-  .then(function(response){
-    console.log(response)
+  await axiosAuth.post(`client/lexdocs/template/get`, schema, { headers:{"Content-Type" : "application/json"} })
+  .then(function({ data }){
+    console.log(data)
+    return response = data
   })
   .catch(function(error){
     return console.log(error)
   })
+
+  return response;
 }

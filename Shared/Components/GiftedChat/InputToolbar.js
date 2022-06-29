@@ -8,7 +8,7 @@ export const renderInputToolbar = (props) => (
   <InputToolbar
     {...props}
     containerStyle={{
-      backgroundColor: colors.secondary,
+      backgroundColor: colors.secondary_2,
       borderRadius: 3,
       alignItems: 'stretch',
       justifyContent: 'center',
@@ -20,19 +20,21 @@ export const renderInputToolbar = (props) => (
   />
 )
 
-export const renderComposer = (props) => (
+export const renderComposer = (disableComposer, props) => (
   <Composer
     {...props}
     textInputStyle={{
       color: colors.white,     
     }}
+    disableComposer={disableComposer}
     placeholderTextColor={colors.white}
   />
 );
 
-export const renderSend = (props) => (
+export const renderSend = (disableComposer, props) => (
   <Send
     {...props}
+    disabled={disableComposer}
     containerStyle={{
       backgroundColor: colors.secondary_light,
       paddingVertical: 8,

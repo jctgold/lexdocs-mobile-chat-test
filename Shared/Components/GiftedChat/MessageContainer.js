@@ -57,7 +57,7 @@ export const renderMessageText = (props) => (
   <MessageText
     {...props}
     textStyle={{
-      left: { color: colors.secondary },
+      left: { color: colors.secondary_2 },
       right: { color: colors.white },
     }}
     customTextStyle={{ fontSize: 14, fontWeight: '500' }}

@@ -39,3 +39,14 @@ export const partyKind = [
   },
 ]
 
+export const proceedToStep2 = [
+  {
+    title: 'Yes, Proceed to Step 2',
+    value: 'Yes'
+  },
+  {
+    title: 'No, Go back to Start',
+    value: 'No'
+  },
+]
+
